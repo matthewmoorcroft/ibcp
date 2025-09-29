@@ -131,3 +131,9 @@ dmypy.json
 # custom
 .vscode
 .DS_Store
+
+# chat docs - planning documentation
+chat_docs/
+
+# uv
+.venv/
