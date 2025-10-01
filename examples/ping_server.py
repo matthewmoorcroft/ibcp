@@ -1,10 +1,9 @@
+""" This script pings the server every 5 minutes and tries to reauthenticate in case it looses it."""
+
 from datetime import datetime
 import time
 
 import ibcp
-
-
-""" This script pings the server every 5 minutes and tries to reauthenticate in case it looses it."""
 
 
 if __name__ == "__main__":

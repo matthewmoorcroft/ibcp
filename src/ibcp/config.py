@@ -6,7 +6,10 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-import tomllib
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 
 from .exceptions import ConfigurationError
 

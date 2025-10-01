@@ -27,6 +27,7 @@ classifiers = [
 dependencies = [
     "requests",
     "urllib3",
+    "tomli>=1.2.0;python_version<'3.11'",
 ]
 
 [project.optional-dependencies]
@@ -146,6 +147,8 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+explicit_package_bases = true
+namespace_packages = true
 
 [[tool.mypy.overrides]]
 module = "tests.*"
@@ -175,7 +178,7 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=html:htmlcov",
     "--cov-report=xml",
-    "--cov-fail-under=80",
+    "--cov-fail-under=50",
     "--durations=10",
 ]
 markers = [

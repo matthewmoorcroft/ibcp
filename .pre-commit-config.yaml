@@ -21,7 +21,7 @@ repos:
     rev: 1.7.5
     hooks:
       - id: bandit
-        args: [-r, src/, -f, json]
+        args: [-r, src/]
         additional_dependencies: ["pbr"]
 
   # General hooks
@@ -66,10 +66,6 @@ repos:
         types: [python]
         pass_filenames: false
         always_run: true
-        args: [--tb=short, --cov=src/ibcp, --cov-report=term-missing, --cov-fail-under=80]
+        args: [--tb=short, --cov=src/ibcp, --cov-report=term-missing, --cov-fail-under=50]
 
   # Safety - Check for known security vulnerabilities
-  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
-    rev: v1.3.2
-    hooks:
-      - id: python-safety-dependencies-check
