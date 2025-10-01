@@ -89,8 +89,10 @@ packages = ["src/ibcp"]
 
 # Ruff configuration
 [tool.ruff]
-target-version = "py38"
+target-version = "py39"
 line-length = 88
+
+[tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
@@ -112,6 +114,7 @@ ignore = [
     "PLR0913", # too many arguments
     "PLR0915", # too many statements
     "PLR2004", # magic value used in comparison
+    "B019",   # lru_cache on methods (we use it intentionally)
 ]
 
 [tool.ruff.format]
@@ -131,7 +134,7 @@ lines-after-imports = 2
 
 # MyPy configuration
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

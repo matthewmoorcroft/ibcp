@@ -81,7 +81,7 @@ jobs:
         uv run bandit -r src/ -f txt
 
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-reports
@@ -113,7 +113,7 @@ jobs:
         uv run pytest tests/benchmarks/ --benchmark-json=benchmark-results.json
 
     - name: Upload benchmark results
-      uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
       with:
         name: benchmark-results
         path: benchmark-results.json
@@ -143,7 +143,7 @@ jobs:
         uv run twine check dist/*
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
       with:
         name: dist
         path: dist/
@@ -216,7 +216,7 @@ jobs:
         uv run make html
 
     - name: Upload documentation
-      uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
       with:
         name: documentation
         path: docs/_build/html/

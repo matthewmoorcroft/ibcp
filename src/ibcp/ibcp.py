@@ -1,12 +1,13 @@
+from functools import lru_cache
+import json
 import logging
 import time
-from functools import lru_cache
 from typing import Any, Dict, List, Optional, Union
 
 import requests
-import urllib3
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+import urllib3
 
 from .config import IBConfig
 from .exceptions import (
@@ -17,6 +18,7 @@ from .exceptions import (
     RateLimitError,
     ValidationError,
 )
+
 
 urllib3.disable_warnings(
     urllib3.exceptions.InsecureRequestWarning
@@ -57,14 +59,14 @@ class REST:
                 ssl_verify=ssl,
                 log_level=log_level,
             )
-        
+
         self.url = f"{self.config.base_url}/v1/api/"
         self.ssl = self.config.ssl_verify
         self.logger = logging.getLogger(__name__)
-        
+
         # Set up session with connection pooling and retries
         self.session = self._setup_session()
-        
+
         # Initialize account ID
         try:
             accounts = self.get_accounts()
@@ -74,8 +76,8 @@ class REST:
             self.logger.info(f"Initialized with account ID: {self.id}")
         except Exception as e:
             self.logger.error(f"Failed to initialize account: {e}")
-            raise AuthenticationError(f"Failed to get account information: {e}")
-    
+            raise AuthenticationError(f"Failed to get account information: {e}") from e
+
     def _setup_session(self) -> requests.Session:
         """Set up requests session with connection pooling and retry strategy.
         
@@ -83,7 +85,7 @@ class REST:
             Configured requests session
         """
         session = requests.Session()
-        
+
         # Configure retry strategy
         retry_strategy = Retry(
             total=self.config.max_retries,
@@ -91,19 +93,19 @@ class REST:
             status_forcelist=[429, 500, 502, 503, 504],
             allowed_methods=["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE", "POST"]
         )
-        
+
         # Configure adapter with connection pooling
         adapter = HTTPAdapter(
             max_retries=retry_strategy,
             pool_connections=10,
             pool_maxsize=20
         )
-        
+
         session.mount("http://", adapter)
         session.mount("https://", adapter)
-        
+
         return session
-    
+
     def _handle_response(self, response: requests.Response, endpoint: str = "") -> Any:
         """Handle API response and raise appropriate exceptions.
         
@@ -128,12 +130,12 @@ class REST:
                     response.status_code,
                     {"text": response.text},
                     endpoint
-                )
-        
+                ) from e
+
         # Handle specific error cases
         if response.status_code == 401:
             raise AuthenticationError("Authentication required or expired")
-        
+
         if response.status_code == 429:
             retry_after = response.headers.get("Retry-After")
             raise RateLimitError(
@@ -141,20 +143,20 @@ class REST:
                 retry_after=int(retry_after) if retry_after else None,
                 endpoint=endpoint
             )
-        
+
         # General API error
         try:
             error_data = response.json()
         except ValueError:
             error_data = {"text": response.text}
-        
+
         raise APIError(
             f"HTTP {response.status_code} error",
             response.status_code,
             error_data,
             endpoint
         )
-    
+
     def _make_request(
         self,
         method: str,
@@ -174,16 +176,16 @@ class REST:
         url = f"{self.url}{endpoint}"
         kwargs.setdefault("verify", self.ssl)
         kwargs.setdefault("timeout", self.config.timeout)
-        
+
         self.logger.debug(f"{method} {endpoint} with args: {kwargs}")
-        
+
         try:
             response = self.session.request(method, url, **kwargs)
             return self._handle_response(response, endpoint)
         except requests.exceptions.Timeout:
-            raise APIError(f"Request timeout after {self.config.timeout}s", 408, {}, endpoint)
+            raise APIError(f"Request timeout after {self.config.timeout}s", 408, {}, endpoint) from None
         except requests.exceptions.ConnectionError as e:
-            raise APIError(f"Connection error: {e}", 0, {}, endpoint)
+            raise APIError(f"Connection error: {e}", 0, {}, endpoint) from e
 
     def get_accounts(self) -> List[Dict[str, Any]]:
         """Returns account information.
@@ -212,15 +214,15 @@ class REST:
         """
         if not account_id or not isinstance(account_id, str):
             raise ValidationError("account_id must be a non-empty string", "account_id")
-        
+
         self.logger.info(f"Switching to account: {account_id}")
-        
+
         response = self._make_request(
             "POST",
             "iserver/account",
             json={"acctId": account_id}
         )
-        
+
         self.id = account_id
         self.logger.info(f"Successfully switched to account: {account_id}")
         return response
@@ -240,26 +242,26 @@ class REST:
         """
         if currency is not None and (not isinstance(currency, str) or len(currency) != 3):
             raise ValidationError("currency must be a 3-character string (e.g., 'USD')", "currency")
-        
+
         response = self._make_request("GET", f"portfolio/{self.id}/ledger")
-        
+
         if currency:
             if currency not in response:
                 raise ValidationError(f"Currency '{currency}' not found in account", "currency")
             return {currency: response[currency]["cashbalance"]}
-        
+
         balance = {}
         for key, item in response.items():
             if key != "BASE" and isinstance(item, dict) and "cashbalance" in item:
                 balance[key] = item["cashbalance"]
-        
+
         return balance
 
     def get_stock_last_price(
         self,
         ticker: str,
         conid: Union[str, int] = "default",
-        contract_filters: Dict[str, Any] = None,
+        contract_filters: Optional[Dict[str, Any]] = None,
         max_retries: int = 10
     ) -> float:
         """Get the last price of a stock.
@@ -279,12 +281,12 @@ class REST:
         """
         if not ticker or not isinstance(ticker, str):
             raise ValidationError("ticker must be a non-empty string", "ticker")
-        
+
         if contract_filters is None:
             contract_filters = {"isUS": True}
-        
+
         fields = {'last_price': '31'}
-        
+
         for attempt in range(max_retries):
             try:
                 response = self.get_marketdata_snapshot(ticker, conid, contract_filters=contract_filters)
@@ -302,11 +304,11 @@ class REST:
                     raise MarketDataError(
                         f"Failed to get price for {ticker} after {max_retries} attempts",
                         symbol=ticker
-                    )
-        
+                    ) from None
+
         raise MarketDataError(f"Unable to retrieve price for {ticker}", symbol=ticker)
-    
-    def get_netvalue(self,currency: str = None) -> dict:
+
+    def get_netvalue(self, currency: Optional[str] = None) -> dict:
         """Returns net value of the selected account
 
         :param currency: Currency to return
@@ -321,7 +323,7 @@ class REST:
         body = response.json()
         if currency:
             return {currency: body[currency]["netliquidationvalue"]}
-        
+
         net_value = {}
         for key, item in body.items():
             if key != "BASE":
@@ -351,45 +353,44 @@ class REST:
         """
         if not symbol or not isinstance(symbol, str):
             raise ValidationError("symbol must be a non-empty string", "symbol")
-        
+
         # Convert JSON strings back to dicts for internal use
-        import json
-        
+
         instrument_filters_dict = None
         contract_filters_dict = {"isUS": True}  # default
-        
+
         if instrument_filters:
             try:
                 instrument_filters_dict = json.loads(instrument_filters)
             except json.JSONDecodeError:
-                raise ValidationError("instrument_filters must be valid JSON", "instrument_filters")
-        
+                raise ValidationError("instrument_filters must be valid JSON", "instrument_filters") from None
+
         if contract_filters:
             try:
                 contract_filters_dict = json.loads(contract_filters)
             except json.JSONDecodeError:
-                raise ValidationError("contract_filters must be valid JSON", "contract_filters")
-        
+                raise ValidationError("contract_filters must be valid JSON", "contract_filters") from None
+
         return self._get_conid_uncached(symbol, instrument_filters_dict, contract_filters_dict)
-    
+
     def _get_conid_uncached(
         self,
         symbol: str,
         instrument_filters: Optional[Dict[str, Any]] = None,
-        contract_filters: Dict[str, Any] = None,
+        contract_filters: Optional[Dict[str, Any]] = None,
     ) -> int:
         """Internal method to get contract ID without caching."""
         if contract_filters is None:
             contract_filters = {"isUS": True}
-        
+
         query = {"symbols": symbol}
         response = self._make_request("GET", "trsrv/stocks", params=query)
-        
+
         if symbol not in response or not response[symbol]:
             raise MarketDataError(f"No instruments found for symbol: {symbol}", symbol=symbol)
-        
+
         instruments = response[symbol]
-        
+
         if instrument_filters or contract_filters:
             def filter_instrument(instrument: Dict[str, Any]) -> bool:
                 def apply_filters(x: Dict[str, Any], filters: Dict[str, Any]) -> bool:
@@ -407,15 +408,15 @@ class REST:
                 return len(instrument.get("contracts", [])) > 0
 
             instruments = [inst for inst in instruments if filter_instrument(inst)]
-        
+
         if not instruments or not instruments[0].get("contracts"):
             raise MarketDataError(
                 f"No contracts found for symbol: {symbol} with given filters",
                 symbol=symbol
             )
-        
+
         return instruments[0]["contracts"][0]["conid"]
-    
+
     def get_conid_simple(
         self,
         symbol: str,
@@ -432,12 +433,10 @@ class REST:
         Returns:
             Contract ID as integer
         """
-        import json
-        
         # Convert dicts to JSON strings for caching
         instrument_filters_str = json.dumps(instrument_filters, sort_keys=True) if instrument_filters else None
         contract_filters_str = json.dumps(contract_filters, sort_keys=True) if contract_filters else None
-        
+
         return self.get_conid(symbol, instrument_filters_str, contract_filters_str)
 
     def get_portfolio(self) -> dict:
@@ -469,16 +468,16 @@ class REST:
         """
         if not message_id or not isinstance(message_id, str):
             raise ValidationError("message_id must be a non-empty string", "message_id")
-        
+
         self.logger.debug(f"Replying yes to message: {message_id}")
-        
+
         answer = {"confirmed": True}
         response = self._make_request(
             "POST",
             f"iserver/reply/{message_id}",
             json=answer
         )
-        
+
         # Handle response format
         if isinstance(response, list) and response:
             return response[0]
@@ -490,7 +489,7 @@ class REST:
         """
         dic = response.json()[0]
         if reply_yes_to_all:
-            while "order_id" not in dic.keys():
+            while "order_id" not in dic:
                 print("Answering yes to ...")
                 print(dic["message"])
                 dic = self.reply_yes(dic["id"])
@@ -516,26 +515,26 @@ class REST:
         """
         if not list_of_orders or not isinstance(list_of_orders, list):
             raise ValidationError("list_of_orders must be a non-empty list", "list_of_orders")
-        
+
         # Validate each order
         for i, order in enumerate(list_of_orders):
             self._validate_order(order, f"order[{i}]")
-        
+
         self.logger.info(f"Submitting {len(list_of_orders)} orders")
-        
+
         try:
             response = self._make_request(
                 "POST",
                 f"iserver/account/{self.id}/orders",
                 json={"orders": list_of_orders}
             )
-            
+
             # Handle the response using existing logic
             return self._reply_all_yes_dict(response, reply_yes)
-            
+
         except APIError as e:
-            raise OrderError(f"Failed to submit orders: {e.message}", order_data=list_of_orders)
-    
+            raise OrderError(f"Failed to submit orders: {e.message}", order_data=list_of_orders) from e
+
     def _validate_order(self, order: Dict[str, Any], field_name: str = "order") -> None:
         """Validate order dictionary.
         
@@ -548,20 +547,20 @@ class REST:
         """
         if not isinstance(order, dict):
             raise ValidationError(f"{field_name} must be a dictionary", field_name)
-        
+
         required_fields = ["conid", "orderType", "side", "quantity"]
         for field in required_fields:
             if field not in order:
                 raise ValidationError(f"Missing required field '{field}' in {field_name}", field_name)
-        
+
         # Validate quantity
         if not isinstance(order["quantity"], (int, float)) or order["quantity"] <= 0:
             raise ValidationError(f"quantity must be a positive number in {field_name}", field_name)
-        
+
         # Validate side
         if order["side"] not in ["BUY", "SELL"]:
             raise ValidationError(f"side must be 'BUY' or 'SELL' in {field_name}", field_name)
-        
+
         # Validate order type
         valid_order_types = ["MKT", "LMT", "STP", "STP_LIMIT"]
         if order["orderType"] not in valid_order_types:
@@ -569,7 +568,7 @@ class REST:
                 f"orderType must be one of {valid_order_types} in {field_name}",
                 field_name
             )
-    
+
     def _reply_all_yes_dict(self, response: Dict[str, Any], reply_yes_to_all: bool) -> Dict[str, Any]:
         """Handle reply-yes logic for dictionary response.
         
@@ -585,12 +584,12 @@ class REST:
             current_response = response[0]
         else:
             current_response = response
-        
+
         if reply_yes_to_all and isinstance(current_response, dict):
             while "order_id" not in current_response and "id" in current_response:
                 self.logger.info(f"Auto-replying yes to: {current_response.get('message', 'confirmation')}")
                 current_response = self.reply_yes(current_response["id"])
-        
+
         return current_response
 
     def get_order(self, orderId: str) -> dict:
@@ -607,7 +606,7 @@ class REST:
 
         return response.json()
 
-    def get_live_orders(self, filters: list = None) -> dict:
+    def get_live_orders(self, filters: Optional[list] = None) -> dict:
         """Returns list of live orders
 
         :param filters: List of filters for the returning response. Available items -- "inactive" "pending_submit" "pre_submitted" "submitted" "filled" "pending_cancel" "cancelled" "warn_state" "sort_by_time", defaults to []
@@ -636,11 +635,11 @@ class REST:
         response = requests.delete(
             f"{self.url}iserver/account/{self.id}/order/{orderId}", verify=self.ssl
         )
-        
+
         return response.json()
 
     def modify_order(
-        self, orderId: str = None, order: dict = None, reply_yes=True
+        self, orderId: Optional[str] = None, order: Optional[dict] = None, reply_yes=True
     ) -> dict:
         """Modify submitted order
 
@@ -654,7 +653,7 @@ class REST:
         :rtype: dict
         """
         assert (
-            orderId != None and order != None
+            orderId is not None and order is not None
         ), "Input parameters (orderId or order) are missing"
 
         response = requests.post(
@@ -744,7 +743,7 @@ class REST:
         )
 
         return response.json()[symbol]
-    
+
     def get_marketdata_snapshot(
         self,
         symbol: str,
@@ -769,42 +768,41 @@ class REST:
         """
         if not symbol or not isinstance(symbol, str):
             raise ValidationError("symbol must be a non-empty string", "symbol")
-        
+
         if contract_filters is None:
             contract_filters = {"isUS": True}
-        
+
         if fields is None:
             fields = ["31"]  # Default to last price
-        
+
         if conid == "default":
             conid = self.get_conid_simple(symbol, contract_filters=contract_filters)
-        
+
         query = {
             "conids": str(conid),
             "fields": ",".join(fields)
         }
-        
+
         try:
             response = self._make_request("GET", "iserver/marketdata/snapshot", params=query)
-            
+
             if not response:
                 raise MarketDataError(f"No market data returned for {symbol}", symbol=symbol)
-            
+
             return response
-            
+
         except APIError as e:
             raise MarketDataError(
                 f"Failed to get market data for {symbol}: {e.message}",
                 symbol=symbol,
                 contract_id=conid if isinstance(conid, int) else None
-            )
+            ) from e
 
 
 if __name__ == "__main__":
 
     api = REST()
 
-    # print(api.reply_yes("a37bcc93-736b-441b-88a3-ee291d5dbcbd"))
     orders = [
         {
             "conid": api.get_conid("AAPL"),

@@ -1,8 +1,8 @@
 """Configuration management for the IBCP library."""
 
+from dataclasses import dataclass, field
 import logging
 import os
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -20,28 +20,28 @@ class IBConfig:
     ssl_verify: bool = False
     timeout: int = 30
     max_retries: int = 3
-    
+
     # Rate limiting
     rate_limit: int = 100  # requests per minute
     rate_limit_window: int = 60  # seconds
-    
+
     # Logging
     log_level: str = "INFO"
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    
+
     # Caching
     cache_enabled: bool = True
     cache_ttl: int = 300  # seconds (5 minutes)
     cache_max_size: int = 1000
-    
+
     # WebSocket settings (for future use)
     ws_url: Optional[str] = None
     ws_heartbeat: int = 30
     ws_reconnect_attempts: int = 5
-    
+
     # Development settings
     debug: bool = False
-    
+
     # Additional settings
     extra_settings: Dict[str, Any] = field(default_factory=dict)
 
@@ -54,16 +54,16 @@ class IBConfig:
         """Validate configuration values."""
         if self.timeout <= 0:
             raise ConfigurationError("timeout must be positive")
-        
+
         if self.max_retries < 0:
             raise ConfigurationError("max_retries must be non-negative")
-        
+
         if self.rate_limit <= 0:
             raise ConfigurationError("rate_limit must be positive")
-        
+
         if not self.base_url:
             raise ConfigurationError("base_url cannot be empty")
-        
+
         # Validate log level
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if self.log_level.upper() not in valid_levels:
@@ -90,21 +90,21 @@ class IBConfig:
             ConfigurationError: If file cannot be read or parsed
         """
         config_path = Path(path)
-        
+
         if not config_path.exists():
             raise ConfigurationError(f"Configuration file not found: {path}")
-        
+
         try:
-            with open(config_path, "rb") as f:
+            with Path(config_path).open("rb") as f:
                 data = tomllib.load(f)
-            
+
             # Extract IBCP-specific configuration
             ibcp_config = data.get("ibcp", {})
-            
+
             return cls(**ibcp_config)
-        
+
         except Exception as e:
-            raise ConfigurationError(f"Failed to load configuration from {path}: {e}")
+            raise ConfigurationError(f"Failed to load configuration from {path}: {e}") from e
 
     @classmethod
     def from_env(cls, prefix: str = "IBCP_") -> "IBConfig":
@@ -117,7 +117,7 @@ class IBConfig:
             IBConfig instance with environment settings
         """
         env_config = {}
-        
+
         # Map environment variables to config fields
         env_mappings = {
             f"{prefix}BASE_URL": "base_url",
@@ -128,7 +128,7 @@ class IBConfig:
             f"{prefix}LOG_LEVEL": "log_level",
             f"{prefix}DEBUG": "debug",
         }
-        
+
         for env_var, config_key in env_mappings.items():
             value = os.getenv(env_var)
             if value is not None:
@@ -139,10 +139,10 @@ class IBConfig:
                     try:
                         env_config[config_key] = int(value)
                     except ValueError:
-                        raise ConfigurationError(f"Invalid integer value for {env_var}: {value}")
+                        raise ConfigurationError(f"Invalid integer value for {env_var}: {value}") from None
                 else:
                     env_config[config_key] = value
-        
+
         return cls(**env_config)
 
     @classmethod
@@ -193,6 +193,6 @@ class IBConfig:
                 setattr(self, key, value)
             else:
                 self.extra_settings[key] = value
-        
+
         self._validate_config()
         self._setup_logging()

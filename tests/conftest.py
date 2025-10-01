@@ -1,10 +1,10 @@
 """Pytest configuration and shared fixtures."""
 
-import json
+from typing import Any, Dict
+from unittest.mock import patch
+
 import pytest
 import responses
-from unittest.mock import Mock, patch
-from typing import Dict, Any
 
 from src.ibcp.ibcp import REST
 
@@ -93,7 +93,7 @@ def sample_market_data():
         {
             "conid": 265598,
             "31": "150.25",  # Last price
-            "70": "150.20",  # Bid price  
+            "70": "150.20",  # Bid price
             "71": "150.30",  # Ask price
             "7295": "1640995200000",  # Last update time
             "7296": "1"  # Market data availability
@@ -107,7 +107,7 @@ def sample_order_data():
     return {
         "conid": 265598,
         "orderType": "MKT",
-        "side": "BUY", 
+        "side": "BUY",
         "quantity": 100,
         "tif": "DAY"
     }
@@ -136,7 +136,7 @@ def mock_ib_gateway():
             json=[{"accountId": "DU123456"}],
             status=200
         )
-        
+
         # Portfolio endpoints
         rsps.add(
             responses.GET,
@@ -147,7 +147,7 @@ def mock_ib_gateway():
             }],
             status=200
         )
-        
+
         # Market data endpoints
         rsps.add(
             responses.GET,
@@ -158,7 +158,7 @@ def mock_ib_gateway():
             }],
             status=200
         )
-        
+
         # Contract search endpoints
         rsps.add(
             responses.GET,
@@ -175,7 +175,7 @@ def mock_ib_gateway():
             },
             status=200
         )
-        
+
         # Order endpoints
         rsps.add(
             responses.POST,
@@ -183,27 +183,27 @@ def mock_ib_gateway():
             json=[{"order_id": "123456789"}],
             status=200
         )
-        
+
         return rsps
-    
+
     return _setup_mock_responses
 
 
 class MockWebSocket:
     """Mock WebSocket for testing streaming functionality."""
-    
+
     def __init__(self):
         self.messages = []
         self.closed = False
-    
+
     async def send(self, message):
         self.messages.append(message)
-    
+
     async def recv(self):
         if self.messages:
             return self.messages.pop(0)
         return '{"type": "heartbeat"}'
-    
+
     async def close(self):
         self.closed = True
 
