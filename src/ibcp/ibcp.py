@@ -123,7 +123,7 @@ class REST:
         """
         if response.status_code == 200:
             try:
-                return response.json()
+        return response.json()
             except ValueError as e:
                 raise APIError(
                     f"Invalid JSON response: {e}",
@@ -244,17 +244,17 @@ class REST:
             raise ValidationError("currency must be a 3-character string (e.g., 'USD')", "currency")
 
         response = self._make_request("GET", f"portfolio/{self.id}/ledger")
-
+        
         if currency:
             if currency not in response:
                 raise ValidationError(f"Currency '{currency}' not found in account", "currency")
             return {currency: response[currency]["cashbalance"]}
-
+        
         balance = {}
         for key, item in response.items():
             if key != "BASE" and isinstance(item, dict) and "cashbalance" in item:
                 balance[key] = item["cashbalance"]
-
+            
         return balance
 
     def get_stock_last_price(
@@ -299,15 +299,15 @@ class REST:
                 self.logger.debug(f"Attempt {attempt + 1} failed for {ticker}: {e}")
                 if attempt < max_retries - 1:
                     self.logger.info(f"Waiting for {ticker} price data (attempt {attempt + 1}/{max_retries})")
-                    time.sleep(0.5)
+                time.sleep(0.5)
                 else:
                     raise MarketDataError(
                         f"Failed to get price for {ticker} after {max_retries} attempts",
                         symbol=ticker
                     ) from None
-
+            
         raise MarketDataError(f"Unable to retrieve price for {ticker}", symbol=ticker)
-
+    
     def get_netvalue(self, currency: Optional[str] = None) -> dict:
         """Returns net value of the selected account
 
@@ -316,14 +316,12 @@ class REST:
         :return: Net value of the selected account
         :rtype: dict
         """
-        response = requests.get(
-            f"{self.url}portfolio/{self.id}/ledger", verify=self.ssl
-        )
+        response = self._make_request("GET", f"portfolio/{self.id}/ledger")
 
         body = response.json()
         if currency:
             return {currency: body[currency]["netliquidationvalue"]}
-
+        
         net_value = {}
         for key, item in body.items():
             if key != "BASE":
@@ -359,7 +357,7 @@ class REST:
         instrument_filters_dict = None
         contract_filters_dict = {"isUS": True}  # default
 
-        if instrument_filters:
+                if instrument_filters:
             try:
                 instrument_filters_dict = json.loads(instrument_filters)
             except json.JSONDecodeError:
@@ -397,7 +395,7 @@ class REST:
                     return all(x.get(key) == val for key, val in filters.items())
 
                 if instrument_filters and not apply_filters(instrument, instrument_filters):
-                    return False
+                        return False
 
                 if contract_filters:
                     instrument["contracts"] = [
@@ -445,9 +443,7 @@ class REST:
         :return: Portfolio
         :rtype: dict
         """
-        response = requests.get(
-            f"{self.url}portfolio/{self.id}/positions/0", verify=self.ssl
-        )
+        response = self._make_request("GET", f"portfolio/{self.id}/positions/0")
 
         dic = {item["contractDesc"]: item["position"] for item in response.json()}
         dic["balance"] = self.get_cash_balance()
@@ -600,9 +596,7 @@ class REST:
         :return: Details of the order
         :rtype: dict
         """
-        response = requests.get(
-            f"{self.url}iserver/account/order/status/{orderId}", verify=self.ssl
-        )
+        response = self._make_request("GET", f"iserver/account/order/status/{orderId}")
 
         return response.json()
 
@@ -616,11 +610,7 @@ class REST:
         """
         if filters is None:
             filters = []
-        response = requests.get(
-            f"{self.url}iserver/account/orders",
-            params={"filters": filters},
-            verify=self.ssl,
-        )
+        response = self._make_request("GET", "iserver/account/orders", params={"filters": filters})
 
         return response.json()
 
@@ -632,10 +622,8 @@ class REST:
         :return: Response from the server
         :rtype: dict
         """
-        response = requests.delete(
-            f"{self.url}iserver/account/{self.id}/order/{orderId}", verify=self.ssl
-        )
-
+        response = self._make_request("DELETE", f"iserver/account/{self.id}/order/{orderId}")
+        
         return response.json()
 
     def modify_order(
@@ -652,15 +640,10 @@ class REST:
         :return: Response from the server
         :rtype: dict
         """
-        assert (
-            orderId is not None and order is not None
-        ), "Input parameters (orderId or order) are missing"
+        if orderId is None or order is None:
+            raise ValidationError("Input parameters (orderId or order) are missing", "orderId,order")
 
-        response = requests.post(
-            f"{self.url}iserver/account/{self.id}/order/{orderId}",
-            json=order,
-            verify=self.ssl,
-        )
+        response = self._make_request("POST", f"iserver/account/{self.id}/order/{orderId}", json=order)
 
         return self._reply_all_yes(response, reply_yes)
 
@@ -670,7 +653,7 @@ class REST:
         :return: Response from the server
         :rtype: dict
         """
-        response = requests.post(f"{self.url}tickle", verify=self.ssl)
+        response = self._make_request("POST", "tickle")
         return response.json()
 
     def get_auth_status(self) -> dict:
@@ -679,17 +662,17 @@ class REST:
         :return: Status dictionary
         :rtype: dict
         """
-        response = requests.post(f"{self.url}iserver/auth/status", verify=self.ssl)
+        response = self._make_request("POST", "iserver/auth/status")
         return response.json()
 
     def re_authenticate(self) -> None:
         """Attempts to re-authenticate when authentication is lost"""
-        requests.post(f"{self.url}iserver/reauthenticate", verify=self.ssl)
+        self._make_request("POST", "iserver/reauthenticate")
         print("Reauthenticating ...")
 
     def log_out(self) -> None:
         """Log out from the gateway session"""
-        requests.post(f"{self.url}logout", verify=self.ssl)
+        self._make_request("POST", "logout")
 
     def get_bars(
         self,
@@ -723,9 +706,7 @@ class REST:
             "bar": bar,
             "outsideRth": outsideRth,
         }
-        response = requests.get(
-            f"{self.url}iserver/marketdata/history", params=query, verify=self.ssl
-        )
+        response = self._make_request("GET", "iserver/marketdata/history", params=query)
 
         return response.json()
 
@@ -738,12 +719,10 @@ class REST:
         :rtype: list
         """
         query = {"symbols": symbol}
-        response = requests.get(
-            f"{self.url}trsrv/futures", params=query, verify=self.ssl
-        )
+        response = self._make_request("GET", "trsrv/futures", params=query)
 
         return response.json()[symbol]
-
+    
     def get_marketdata_snapshot(
         self,
         symbol: str,

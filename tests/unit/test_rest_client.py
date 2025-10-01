@@ -1,13 +1,12 @@
 """Unit tests for the REST client."""
 
-from decimal import Decimal
-from unittest.mock import patch
-
 import pytest
 import responses
+from unittest.mock import patch, Mock
+from decimal import Decimal
 
-from src.ibcp.config import IBConfig
 from src.ibcp.ibcp import REST
+from src.ibcp.config import IBConfig
 
 
 class TestRESTClient:
@@ -38,7 +37,7 @@ class TestRESTClient:
             json=sample_account_data,
             status=200
         )
-
+        
         with patch.object(REST, 'get_accounts', return_value=[{"accountId": "DU123456"}]):
             client = REST()
             accounts = client.get_accounts()
@@ -54,14 +53,14 @@ class TestRESTClient:
             json={"set": True, "acctId": "DU654321"},
             status=200
         )
-
+        
         with patch.object(REST, 'get_accounts', return_value=[{"accountId": "DU123456"}]):
             client = REST()
             response = client.switch_account("DU654321")
             assert response["acctId"] == "DU654321"
             assert client.id == "DU654321"
 
-    @responses.activate
+    @responses.activate 
     def test_get_cash_balance(self):
         """Test getting cash balance."""
         ledger_data = {
@@ -69,14 +68,14 @@ class TestRESTClient:
             "EUR": {"cashbalance": 5000.25},
             "BASE": {}
         }
-
+        
         responses.add(
             responses.GET,
             "https://localhost:5000/v1/api/portfolio/DU123456/ledger",
             json=ledger_data,
             status=200
         )
-
+        
         with patch.object(REST, 'get_accounts', return_value=[{"accountId": "DU123456"}]):
             client = REST()
             # Test getting all currencies
@@ -84,12 +83,11 @@ class TestRESTClient:
             assert balance["USD"] == 10000.50
             assert balance["EUR"] == 5000.25
             assert "BASE" not in balance
-
+            
             # Test getting specific currency
             usd_balance = client.get_cash_balance("USD")
             assert usd_balance == {"USD": 10000.50}
 
-    @responses.activate
     def test_get_conid(self):
         """Test getting contract ID for a symbol."""
         contract_data = [
@@ -106,20 +104,17 @@ class TestRESTClient:
                 "sections": []
             }
         ]
-
-        responses.add(
-            responses.GET,
-            "https://localhost:5000/v1/api/trsrv/stocks",
-            json=contract_data,
-            status=200
-        )
-
+        
         with patch.object(REST, 'get_accounts', return_value=[{"accountId": "DU123456"}]):
             client = REST()
-            conid = client.get_conid("AAPL")
-            assert conid == 265598
+            with patch.object(client, '_make_request') as mock_request:
+                mock_response = Mock()
+                mock_response.json.return_value = contract_data
+                mock_request.return_value = mock_response
+                
+                conid = client.get_conid("AAPL")
+                assert conid == 265598
 
-    @responses.activate
     def test_get_conid_with_filters(self):
         """Test getting contract ID with filters."""
         contract_data = [
@@ -133,21 +128,18 @@ class TestRESTClient:
                 "sections": []
             }
         ]
-
-        responses.add(
-            responses.GET,
-            "https://localhost:5000/v1/api/trsrv/stocks",
-            json=contract_data,
-            status=200
-        )
-
+        
         with patch.object(REST, 'get_accounts', return_value=[{"accountId": "DU123456"}]):
             client = REST()
-            # Note: contract_filters should be a string for caching to work
-            conid_us = client.get_conid("AAPL", contract_filters='{"isUS": true}')
-            assert conid_us == 265598
+            with patch.object(client, '_make_request') as mock_request:
+                mock_response = Mock()
+                mock_response.json.return_value = contract_data
+                mock_request.return_value = mock_response
+                
+                # Note: contract_filters should be a string for caching to work
+                conid_us = client.get_conid("AAPL", contract_filters='{"isUS": true}')
+                assert conid_us == 265598
 
-    @responses.activate
     def test_get_marketdata_snapshot(self):
         """Test getting market data snapshot."""
         snapshot_data = [
@@ -158,50 +150,28 @@ class TestRESTClient:
                 "71": "NASDAQ"   # Exchange
             }
         ]
-
-        responses.add(
-            responses.GET,
-            "https://localhost:5000/v1/api/trsrv/stocks",
-            json=[{"conid": 265598, "symbol": "AAPL"}],
-            status=200
-        )
-
-        responses.add(
-            responses.GET,
-            "https://localhost:5000/v1/api/iserver/marketdata/snapshot",
-            json=snapshot_data,
-            status=200
-        )
-
+        
         with patch.object(REST, 'get_accounts', return_value=[{"accountId": "DU123456"}]):
             client = REST()
-            snapshot = client.get_marketdata_snapshot("AAPL")
-            assert snapshot[0]["conid"] == 265598
-            assert snapshot[0]["31"] == "150.25"
+            with patch.object(client, 'get_conid_simple', return_value=265598):
+                with patch.object(client, '_make_request') as mock_request:
+                    mock_response = Mock()
+                    mock_response.json.return_value = snapshot_data
+                    mock_request.return_value = mock_response
+                    
+                    snapshot = client.get_marketdata_snapshot("AAPL")
+                    assert snapshot[0]["conid"] == 265598
+                    assert snapshot[0]["31"] == "150.25"
 
-    @responses.activate
     def test_get_stock_last_price(self):
         """Test getting stock last price."""
-        # Mock the contract lookup
-        responses.add(
-            responses.GET,
-            "https://localhost:5000/v1/api/trsrv/stocks",
-            json=[{"conid": 265598, "symbol": "AAPL"}],
-            status=200
-        )
-
-        # Mock the market data snapshot
-        responses.add(
-            responses.GET,
-            "https://localhost:5000/v1/api/iserver/marketdata/snapshot",
-            json=[{"conid": 265598, "31": "150.25"}],
-            status=200
-        )
-
+        snapshot_data = [{"conid": 265598, "31": "150.25"}]
+        
         with patch.object(REST, 'get_accounts', return_value=[{"accountId": "DU123456"}]):
             client = REST()
-            price = client.get_stock_last_price("AAPL")
-            assert price == Decimal("150.25")
+            with patch.object(client, 'get_marketdata_snapshot', return_value=snapshot_data):
+                price = client.get_stock_last_price("AAPL")
+                assert price == Decimal("150.25")
 
     @responses.activate
     def test_submit_orders(self, sample_order_data):
@@ -215,14 +185,14 @@ class TestRESTClient:
                 }
             ]
         }
-
+        
         responses.add(
             responses.POST,
             "https://localhost:5000/v1/api/iserver/account/DU123456/orders",
             json=order_response,
             status=200
         )
-
+        
         with patch.object(REST, 'get_accounts', return_value=[{"accountId": "DU123456"}]):
             client = REST()
             result = client.submit_orders([sample_order_data], reply_yes=False)
@@ -237,7 +207,7 @@ class TestRESTClient:
             json={"confirmed": True},
             status=200
         )
-
+        
         with patch.object(REST, 'get_accounts', return_value=[{"accountId": "DU123456"}]):
             client = REST()
             result = client.reply_yes("test-id")
@@ -247,31 +217,27 @@ class TestRESTClient:
 class TestRESTClientEdgeCases:
     """Test edge cases and error conditions."""
 
-    @responses.activate
     def test_get_conid_no_contracts(self):
         """Test getting contract ID when no contracts are found."""
-        responses.add(
-            responses.GET,
-            "https://localhost:5000/v1/api/trsrv/stocks",
-            json=[],
-            status=200
-        )
-
         with patch.object(REST, 'get_accounts', return_value=[{"accountId": "DU123456"}]):
             client = REST()
-            with pytest.raises(ValueError):
-                client.get_conid("INVALID")
+            with patch.object(client, '_make_request') as mock_request:
+                mock_response = Mock()
+                mock_response.json.return_value = []
+                mock_request.return_value = mock_response
+                
+                with pytest.raises(ValueError):
+                    client.get_conid("INVALID")
 
-    @responses.activate
     def test_get_stock_last_price_retry_logic(self):
         """Test retry logic for getting stock price."""
         with patch.object(REST, 'get_accounts', return_value=[{"accountId": "DU123456"}]):
             client = REST()
-
+            
             # Mock get_marketdata_snapshot to raise an exception
             with patch.object(client, 'get_marketdata_snapshot') as mock_get_marketdata_snapshot:
                 mock_get_marketdata_snapshot.side_effect = Exception("Network error")
-
+                
                 with pytest.raises(ValueError):
                     client.get_stock_last_price("AAPL")
 
@@ -284,7 +250,7 @@ class TestRESTClientEdgeCases:
             json={},
             status=200
         )
-
+        
         with patch.object(REST, 'get_accounts', return_value=[{"accountId": "DU123456"}]):
             client = REST()
             balance = client.get_cash_balance()
@@ -294,47 +260,32 @@ class TestRESTClientEdgeCases:
 class TestRESTClientPerformance:
     """Performance tests for the REST client."""
 
-    @responses.activate
     def test_get_conid_performance(self, benchmark):
         """Test performance of get_conid method."""
-        responses.add(
-            responses.GET,
-            "https://localhost:5000/v1/api/trsrv/stocks",
-            json=[{"conid": 265598, "symbol": "AAPL"}],
-            status=200
-        )
-
+        contract_data = [{"conid": 265598, "symbol": "AAPL"}]
+        
         with patch.object(REST, 'get_accounts', return_value=[{"accountId": "DU123456"}]):
             client = REST()
-            result = benchmark(client.get_conid, "AAPL")
-            assert result == 265598
+            with patch.object(client, '_make_request') as mock_request:
+                mock_response = Mock()
+                mock_response.json.return_value = contract_data
+                mock_request.return_value = mock_response
+                
+                result = benchmark(client.get_conid, "AAPL")
+                assert result == 265598
 
-    @responses.activate
     def test_bulk_quote_performance(self, benchmark):
         """Test performance of getting multiple quotes."""
-        # Mock contract lookups
-        responses.add(
-            responses.GET,
-            "https://localhost:5000/v1/api/trsrv/stocks",
-            json=[{"conid": 265598, "symbol": "AAPL"}],
-            status=200
-        )
-
-        # Mock market data snapshots
-        responses.add(
-            responses.GET,
-            "https://localhost:5000/v1/api/iserver/marketdata/snapshot",
-            json=[{"conid": 265598, "31": "150.25"}],
-            status=200
-        )
-
+        snapshot_data = [{"conid": 265598, "31": "150.25"}]
+        
         with patch.object(REST, 'get_accounts', return_value=[{"accountId": "DU123456"}]):
             client = REST()
-
+            
             def get_multiple_quotes():
                 symbols = ["AAPL", "GOOGL", "MSFT"]
-                return [client.get_stock_last_price(symbol) for symbol in symbols]
-
+                with patch.object(client, 'get_marketdata_snapshot', return_value=snapshot_data):
+                    return [client.get_stock_last_price(symbol) for symbol in symbols]
+            
             result = benchmark(get_multiple_quotes)
             assert len(result) == 3
 

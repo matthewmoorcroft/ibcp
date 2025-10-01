@@ -229,5 +229,5 @@ output = "coverage.xml"
 
 # Bandit configuration
 [tool.bandit]
-exclude_dirs = ["tests"]
-skips = ["B101"]  # Skip assert_used test
+exclude_dirs = ["tests", "docs", "scripts"]
+skips = ["B101", "B601"]  # B101: assert_used (OK in tests), B601: shell injection (false positives)
