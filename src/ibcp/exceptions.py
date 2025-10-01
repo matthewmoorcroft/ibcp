@@ -55,9 +55,7 @@ class OrderError(IBCPError):
         order_data: Optional[Dict[str, Any]] = None,
         order_id: Optional[str] = None,
     ) -> None:
-        super().__init__(
-            message, {"order_data": order_data, "order_id": order_id}
-        )
+        super().__init__(message, {"order_data": order_data, "order_id": order_id})
         self.order_data = order_data
         self.order_id = order_id
 
@@ -71,9 +69,7 @@ class MarketDataError(IBCPError):
         symbol: Optional[str] = None,
         contract_id: Optional[int] = None,
     ) -> None:
-        super().__init__(
-            message, {"symbol": symbol, "contract_id": contract_id}
-        )
+        super().__init__(message, {"symbol": symbol, "contract_id": contract_id})
         self.symbol = symbol
         self.contract_id = contract_id
 
