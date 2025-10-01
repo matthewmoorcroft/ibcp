@@ -641,7 +641,7 @@ class REST:
         :rtype: dict
         """
         if orderId is None or order is None:
-            raise ValidationError("Input parameters (orderId or order) are missing", "orderId,order")
+            raise ValidationError("Input parameters (orderId or order) are missing")
 
         response = self._make_request("POST", f"iserver/account/{self.id}/order/{orderId}", json=order)
 
