@@ -123,7 +123,7 @@ class REST:
         """
         if response.status_code == 200:
             try:
-        return response.json()
+                return response.json()
             except ValueError as e:
                 raise APIError(
                     f"Invalid JSON response: {e}",
@@ -299,7 +299,7 @@ class REST:
                 self.logger.debug(f"Attempt {attempt + 1} failed for {ticker}: {e}")
                 if attempt < max_retries - 1:
                     self.logger.info(f"Waiting for {ticker} price data (attempt {attempt + 1}/{max_retries})")
-                time.sleep(0.5)
+                    time.sleep(0.5)
                 else:
                     raise MarketDataError(
                         f"Failed to get price for {ticker} after {max_retries} attempts",
@@ -357,7 +357,7 @@ class REST:
         instrument_filters_dict = None
         contract_filters_dict = {"isUS": True}  # default
 
-                if instrument_filters:
+        if instrument_filters:
             try:
                 instrument_filters_dict = json.loads(instrument_filters)
             except json.JSONDecodeError:
