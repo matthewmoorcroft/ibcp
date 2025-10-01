@@ -17,7 +17,6 @@ from .exceptions import (
 )
 from .ibcp import REST
 
-
 __version__ = "0.2.0-alpha"
 __all__ = [
     # Main classes
