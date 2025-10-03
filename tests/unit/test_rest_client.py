@@ -7,6 +7,7 @@ import pytest
 import responses
 
 from src.ibcp.config import IBConfig
+from src.ibcp.exceptions import MarketDataError
 from src.ibcp.ibcp import REST
 
 
@@ -248,16 +249,14 @@ class TestRESTClientEdgeCases:
             REST, "get_accounts", return_value=[{"accountId": "DU123456"}]
         ):
             client = REST()
-            with patch.object(client, "_make_request", return_value=api_response):
-                from src.ibcp.exceptions import MarketDataError
-
-                with pytest.raises(MarketDataError):
-                    client.get_conid("INVALID")
+            with (
+                patch.object(client, "_make_request", return_value=api_response),
+                pytest.raises(MarketDataError),
+            ):
+                client.get_conid("INVALID")
 
     def test_get_stock_last_price_retry_logic(self):
         """Test retry logic for getting stock price."""
-        from src.ibcp.exceptions import MarketDataError
-
         with patch.object(
             REST, "get_accounts", return_value=[{"accountId": "DU123456"}]
         ):
