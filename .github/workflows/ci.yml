@@ -39,10 +39,11 @@ jobs:
       run: |
         uv sync --extra dev --extra test
 
-    - name: Run pre-commit hooks
+    - name: Run code quality checks
       run: |
-        uv run pre-commit install
-        uv run pre-commit run --all-files
+        uv run ruff check --no-fix
+        uv run ruff format --check
+        uv run mypy src/
 
     - name: Run tests with pytest
       run: |
