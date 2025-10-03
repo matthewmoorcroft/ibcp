@@ -20,8 +20,6 @@ from .ibcp import REST
 
 __version__ = "0.2.0-alpha"
 __all__ = [
-    # Main classes
-    "IBConfig",
     "REST",
     # Exceptions
     "APIError",
@@ -29,6 +27,8 @@ __all__ = [
     "ConfigurationError",
     "ConnectionError",
     "IBCPError",
+    # Main classes
+    "IBConfig",
     "MarketDataError",
     "OrderError",
     "RateLimitError",

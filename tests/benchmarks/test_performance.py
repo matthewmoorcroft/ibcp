@@ -2,6 +2,7 @@
 
 from unittest.mock import patch
 
+from src.ibcp.config import IBConfig
 from src.ibcp.ibcp import REST
 
 
@@ -18,7 +19,5 @@ class TestPerformanceBenchmarks:
 
     def test_config_creation(self, benchmark):
         """Benchmark config creation."""
-        from src.ibcp.config import IBConfig
-
         result = benchmark(IBConfig)
         assert result is not None
