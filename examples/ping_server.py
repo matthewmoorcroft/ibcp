@@ -1,4 +1,4 @@
-""" This script pings the server every 5 minutes and tries to reauthenticate in case it looses it."""
+"""This script pings the server every 5 minutes and tries to reauthenticate in case it looses it."""
 
 from datetime import datetime
 import time
