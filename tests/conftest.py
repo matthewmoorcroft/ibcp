@@ -1,6 +1,6 @@
 """Pytest configuration and shared fixtures."""
 
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -12,17 +12,13 @@ from src.ibcp.ibcp import REST
 @pytest.fixture
 def mock_config():
     """Mock configuration for testing."""
-    return {
-        "base_url": "https://localhost:5000",
-        "ssl_verify": False,
-        "timeout": 30
-    }
+    return {"base_url": "https://localhost:5000", "ssl_verify": False, "timeout": 30}
 
 
 @pytest.fixture
 def rest_client(mock_config):
     """Create a REST client instance for testing."""
-    with patch.object(REST, 'get_accounts', return_value=[{"accountId": "DU123456"}]):
+    with patch.object(REST, "get_accounts", return_value=[{"accountId": "DU123456"}]):
         client = REST(url=mock_config["base_url"], ssl=mock_config["ssl_verify"])
         return client
 
@@ -51,7 +47,7 @@ def sample_account_data():
             "faclient": False,
             "clearingStatus": "O",
             "parent": {},
-            "desc": "DU123456"
+            "desc": "DU123456",
         }
     ]
 
@@ -81,7 +77,7 @@ def sample_portfolio_data():
             "undConid": 0,
             "conExchMap": [],
             "assetClass": "STK",
-            "model": ""
+            "model": "",
         }
     ]
 
@@ -96,7 +92,7 @@ def sample_market_data():
             "70": "150.20",  # Bid price
             "71": "150.30",  # Ask price
             "7295": "1640995200000",  # Last update time
-            "7296": "1"  # Market data availability
+            "7296": "1",  # Market data availability
         }
     ]
 
@@ -109,7 +105,7 @@ def sample_order_data():
         "orderType": "MKT",
         "side": "BUY",
         "quantity": 100,
-        "tif": "DAY"
+        "tif": "DAY",
     }
 
 
@@ -117,46 +113,37 @@ def sample_order_data():
 def sample_order_response():
     """Sample order response for testing."""
     return [
-        {
-            "order_id": "123456789",
-            "order_status": "Submitted",
-            "encrypt_message": "1"
-        }
+        {"order_id": "123456789", "order_status": "Submitted", "encrypt_message": "1"}
     ]
 
 
 @pytest.fixture
 def mock_ib_gateway():
     """Mock IB Gateway responses for comprehensive testing."""
+
     def _setup_mock_responses(rsps: responses.RequestsMock):
         # Account endpoints
         rsps.add(
             responses.GET,
             "https://localhost:5000/v1/api/portfolio/accounts",
             json=[{"accountId": "DU123456"}],
-            status=200
+            status=200,
         )
 
         # Portfolio endpoints
         rsps.add(
             responses.GET,
             "https://localhost:5000/v1/api/portfolio/DU123456/positions/0",
-            json=[{
-                "contractDesc": "AAPL",
-                "position": 100
-            }],
-            status=200
+            json=[{"contractDesc": "AAPL", "position": 100}],
+            status=200,
         )
 
         # Market data endpoints
         rsps.add(
             responses.GET,
             "https://localhost:5000/v1/api/iserver/marketdata/snapshot",
-            json=[{
-                "conid": 265598,
-                "31": "150.25"
-            }],
-            status=200
+            json=[{"conid": 265598, "31": "150.25"}],
+            status=200,
         )
 
         # Contract search endpoints
@@ -164,16 +151,16 @@ def mock_ib_gateway():
             responses.GET,
             "https://localhost:5000/v1/api/trsrv/stocks",
             json={
-                "AAPL": [{
-                    "name": "APPLE INC",
-                    "contracts": [{
-                        "conid": 265598,
-                        "exchange": "NASDAQ",
-                        "isUS": True
-                    }]
-                }]
+                "AAPL": [
+                    {
+                        "name": "APPLE INC",
+                        "contracts": [
+                            {"conid": 265598, "exchange": "NASDAQ", "isUS": True}
+                        ],
+                    }
+                ]
             },
-            status=200
+            status=200,
         )
 
         # Order endpoints
@@ -181,7 +168,7 @@ def mock_ib_gateway():
             responses.POST,
             "https://localhost:5000/v1/api/iserver/account/DU123456/orders",
             json=[{"order_id": "123456789"}],
-            status=200
+            status=200,
         )
 
         return rsps
@@ -221,14 +208,13 @@ def benchmark_data():
     return {
         "symbols": ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"] * 20,
         "large_portfolio": [
-            {"symbol": f"STOCK{i}", "quantity": i * 10}
-            for i in range(1000)
-        ]
+            {"symbol": f"STOCK{i}", "quantity": i * 10} for i in range(1000)
+        ],
     }
 
 
 # Utility functions for tests
-def assert_valid_response(response: Dict[str, Any], required_fields: list):
+def assert_valid_response(response: dict[str, Any], required_fields: list):
     """Assert that a response contains all required fields."""
     assert isinstance(response, dict)
     for field in required_fields:
@@ -242,12 +228,12 @@ def create_mock_order(symbol="AAPL", quantity=100, side="BUY", order_type="MKT")
         "orderType": order_type,
         "side": side,
         "quantity": quantity,
-        "tif": "DAY"
+        "tif": "DAY",
     }
 
 
 # Markers for different test types
 pytestmark = [
     pytest.mark.filterwarnings("ignore::DeprecationWarning"),
-    pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    pytest.mark.filterwarnings("ignore::PendingDeprecationWarning"),
 ]

@@ -89,4 +89,3 @@ uv run pre-commit autoupdate
 - **Code quality**: Run `uv run ruff check --fix` locally
 - **Type errors**: Run `uv run mypy src/` and fix annotations
 - **Test failures**: Run `uv run pytest` locally to debug
-

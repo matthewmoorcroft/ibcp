@@ -99,4 +99,3 @@ By default, IBCP assumes the gateway session is open at https://localhost:5000 w
    ib = ibcp.REST(url="https://localhost:5000", ssl=False)
 
 Documentation of available functions is at https://ibcp.readthedocs.io/en/latest/reference.html.
-

@@ -35,10 +35,10 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.8.0",
     "pre-commit>=3.6.0",
-    
+
     # Security
     "bandit[toml]>=1.7.5",
-    
+
     # Type stubs
     "types-requests",
     "types-urllib3",
@@ -52,13 +52,13 @@ test = [
     "pytest-asyncio>=0.23.0",
     "pytest-benchmark>=4.0.0",
     "pytest-xdist[psutil]>=3.5.0",
-    
+
     # Test utilities
     "responses>=0.24.0",
     "factory-boy>=3.3.0",
     "faker>=22.0.0",
     "freezegun>=1.4.0",
-    
+
     # Coverage reporting
     "coverage[toml]>=7.4.0",
 ]
@@ -69,7 +69,7 @@ docs = [
     "sphinx-rtd-theme>=2.0.0",
     "sphinx-autodoc-typehints>=1.25.0",
     "myst-parser>=2.0.0",
-    
+
     # Documentation utilities
     "sphinx-click>=5.1.0",
     "sphinx-copybutton>=0.5.2",
@@ -182,7 +182,7 @@ addopts = [
 ]
 markers = [
     "unit: Unit tests",
-    "integration: Integration tests", 
+    "integration: Integration tests",
     "slow: Slow tests",
     "benchmark: Performance benchmarks",
     "network: Tests requiring network access",

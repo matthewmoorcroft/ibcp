@@ -4,7 +4,8 @@ from dataclasses import dataclass, field
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
+
 
 try:
     import tomllib
@@ -46,7 +47,7 @@ class IBConfig:
     debug: bool = False
 
     # Additional settings
-    extra_settings: Dict[str, Any] = field(default_factory=dict)
+    extra_settings: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate configuration after initialization."""
@@ -82,13 +83,13 @@ class IBConfig:
     @classmethod
     def from_file(cls, path: str) -> "IBConfig":
         """Load configuration from a TOML file.
-        
+
         Args:
             path: Path to the configuration file
-            
+
         Returns:
             IBConfig instance with loaded settings
-            
+
         Raises:
             ConfigurationError: If file cannot be read or parsed
         """
@@ -107,15 +108,17 @@ class IBConfig:
             return cls(**ibcp_config)
 
         except Exception as e:
-            raise ConfigurationError(f"Failed to load configuration from {path}: {e}") from e
+            raise ConfigurationError(
+                f"Failed to load configuration from {path}: {e}"
+            ) from e
 
     @classmethod
     def from_env(cls, prefix: str = "IBCP_") -> "IBConfig":
         """Load configuration from environment variables.
-        
+
         Args:
             prefix: Prefix for environment variables (default: "IBCP_")
-            
+
         Returns:
             IBConfig instance with environment settings
         """
@@ -142,27 +145,29 @@ class IBConfig:
                     try:
                         env_config[config_key] = int(value)
                     except ValueError:
-                        raise ConfigurationError(f"Invalid integer value for {env_var}: {value}") from None
+                        raise ConfigurationError(
+                            f"Invalid integer value for {env_var}: {value}"
+                        ) from None
                 else:
                     env_config[config_key] = value
 
         return cls(**env_config)
 
     @classmethod
-    def from_dict(cls, config_dict: Dict[str, Any]) -> "IBConfig":
+    def from_dict(cls, config_dict: dict[str, Any]) -> "IBConfig":
         """Create configuration from a dictionary.
-        
+
         Args:
             config_dict: Dictionary with configuration values
-            
+
         Returns:
             IBConfig instance
         """
         return cls(**config_dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary.
-        
+
         Returns:
             Dictionary representation of the configuration
         """
@@ -187,7 +192,7 @@ class IBConfig:
 
     def update(self, **kwargs: Any) -> None:
         """Update configuration values.
-        
+
         Args:
             **kwargs: Configuration values to update
         """

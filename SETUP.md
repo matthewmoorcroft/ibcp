@@ -132,4 +132,3 @@ Pre-commit is now configured to:
 - Keep CI focused on validation
 
 Just remember to run **`python -m pre_commit install`** once!
-

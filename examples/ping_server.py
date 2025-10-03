@@ -7,12 +7,10 @@ import ibcp
 
 
 if __name__ == "__main__":
-
     sleep_interval = 60 * 5
     api = ibcp.REST()
 
     while True:
-
         status = api.ping_server()
         if not status["iserver"]["authStatus"]["authenticated"]:
             api.re_authenticate()

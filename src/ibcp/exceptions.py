@@ -1,12 +1,12 @@
 """Custom exceptions for the IBCP library."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 class IBCPError(Exception):
     """Base exception for all IBCP library errors."""
 
-    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, message: str, details: Optional[dict[str, Any]] = None) -> None:
         super().__init__(message)
         self.message = message
         self.details = details or {}
@@ -19,7 +19,7 @@ class APIError(IBCPError):
         self,
         message: str,
         status_code: int,
-        response: Dict[str, Any],
+        response: dict[str, Any],
         endpoint: Optional[str] = None,
     ) -> None:
         super().__init__(message, {"status_code": status_code, "response": response})
@@ -52,12 +52,10 @@ class OrderError(IBCPError):
     def __init__(
         self,
         message: str,
-        order_data: Optional[Dict[str, Any]] = None,
+        order_data: Optional[dict[str, Any]] = None,
         order_id: Optional[str] = None,
     ) -> None:
-        super().__init__(
-            message, {"order_data": order_data, "order_id": order_id}
-        )
+        super().__init__(message, {"order_data": order_data, "order_id": order_id})
         self.order_data = order_data
         self.order_id = order_id
 
@@ -71,9 +69,7 @@ class MarketDataError(IBCPError):
         symbol: Optional[str] = None,
         contract_id: Optional[int] = None,
     ) -> None:
-        super().__init__(
-            message, {"symbol": symbol, "contract_id": contract_id}
-        )
+        super().__init__(message, {"symbol": symbol, "contract_id": contract_id})
         self.symbol = symbol
         self.contract_id = contract_id
 
