@@ -40,11 +40,22 @@ Pre-commit hooks run automatically when you commit and will **auto-fix** issues:
 ```bash
 # Make your changes
 git add .
-git commit -m "your changes"  # Pre-commit runs automatically (~2-5 seconds)
+git commit -m "your changes"  # Pre-commit runs automatically (~5-10 seconds)
 
 # If you need to skip pre-commit (emergency only)
 git commit --no-verify -m "emergency fix"
+
+# IMPORTANT: Run pre-commit on ALL files before pushing
+# (Pre-commit only checks staged files by default)
+python -m pre_commit run --all-files
 ```
+
+**💡 Tip:** Before pushing to remote, always run:
+```bash
+python -m pre_commit run --all-files
+python -m ruff format --check .
+```
+This ensures you won't get formatting failures in CI.
 
 ### **Manual Code Quality Checks**
 Run these manually if needed:
