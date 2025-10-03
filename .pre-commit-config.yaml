@@ -3,32 +3,17 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.1.14
     hooks:
-      # Run the linter
+      # Run the linter with auto-fix
       - id: ruff
         args: [--fix]
       # Run the formatter
       - id: ruff-format
 
-  # mypy - Static type checker (optional but recommended)
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
-    hooks:
-      - id: mypy
-        additional_dependencies: [types-requests, types-urllib3]
-
-  # bandit - Security linter
-  - repo: https://github.com/pycqa/bandit
-    rev: 1.7.5
-    hooks:
-      - id: bandit
-        args: [-r, src/]
-        additional_dependencies: ["pbr"]
-
-  # General hooks
+  # General pre-commit hooks (lightweight, fast)
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
-      # Git hooks
+      # File checks
       - id: check-added-large-files
         args: ['--maxkb=1000']
       - id: check-merge-conflict
@@ -36,36 +21,24 @@ repos:
       - id: check-toml
       - id: check-json
       
-      # Code quality
+      # Code cleanup
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: mixed-line-ending
         args: ['--fix=lf']
       
-      # Python specific
+      # Python syntax
       - id: check-ast
-      - id: check-builtin-literals
       - id: check-docstring-first
       - id: debug-statements
-      - id: name-tests-test
-        args: ['--django']
 
-  # commitizen - Conventional commits
+  # commitizen - Conventional commits (optional - can be skipped with --no-verify)
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v3.13.0
     hooks:
       - id: commitizen
+        stages: [commit-msg]
 
-  # pytest - Run tests
-  - repo: local
-    hooks:
-      - id: pytest
-        name: pytest
-        entry: pytest
-        language: system
-        types: [python]
-        pass_filenames: false
-        always_run: true
-        args: [--tb=short, --cov=src/ibcp, --cov-report=term-missing, --cov-fail-under=50]
-
-  # Safety - Check for known security vulnerabilities
+# Note: Heavy checks (mypy, bandit, pytest) are run in CI, not locally
+# This keeps pre-commit fast and developer-friendly
+# Run manually if needed: uv run mypy src/, uv run pytest

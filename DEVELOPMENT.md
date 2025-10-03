@@ -15,13 +15,30 @@ uv run pre-commit install
 
 ## 🔧 Development Workflow
 
+### **What Runs Where?**
+
+**Local (Pre-commit) - Fast & Auto-fixing:**
+- ✅ Ruff formatting and linting (auto-fixes)
+- ✅ File checks (trailing whitespace, etc.)
+- ✅ Syntax validation
+
+**CI (GitHub Actions) - Validation & Testing:**
+- ✅ Type checking (mypy)
+- ✅ Security scanning (bandit)
+- ✅ Full test suite with coverage
+- ✅ Performance benchmarks
+- ✅ Documentation build
+
 ### **Local Development (Pre-commit)**
 Pre-commit hooks run automatically when you commit and will **auto-fix** issues:
 
 ```bash
 # Make your changes
 git add .
-git commit -m "your changes"  # Pre-commit runs automatically and fixes issues
+git commit -m "your changes"  # Pre-commit runs automatically (~2-5 seconds)
+
+# If you need to skip pre-commit (emergency only)
+git commit --no-verify -m "emergency fix"
 ```
 
 ### **Manual Code Quality Checks**
@@ -72,3 +89,4 @@ uv run pre-commit autoupdate
 - **Code quality**: Run `uv run ruff check --fix` locally
 - **Type errors**: Run `uv run mypy src/` and fix annotations
 - **Test failures**: Run `uv run pytest` locally to debug
+
