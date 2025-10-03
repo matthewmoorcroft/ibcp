@@ -1,7 +1,7 @@
 """Unit tests for the REST client."""
 
 from decimal import Decimal
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 import responses
@@ -101,56 +101,55 @@ class TestRESTClient:
 
     def test_get_conid(self):
         """Test getting contract ID for a symbol."""
-        contract_data = [
-            {
-                "conid": 265598,
-                "companyHeader": "Apple Inc",
-                "companyName": "APPLE INC",
-                "symbol": "AAPL",
-                "description": "AAPL",
-                "restricted": None,
-                "fop": "0",
-                "opt": None,
-                "war": None,
-                "sections": [],
-            }
-        ]
+        # The API returns {symbol: [instruments]} where each instrument has contracts
+        api_response = {
+            "AAPL": [
+                {
+                    "companyHeader": "Apple Inc",
+                    "companyName": "APPLE INC",
+                    "symbol": "AAPL",
+                    "description": "AAPL",
+                    "contracts": [
+                        {
+                            "conid": 265598,
+                            "isUS": True,
+                        }
+                    ],
+                }
+            ]
+        }
 
         with patch.object(
             REST, "get_accounts", return_value=[{"accountId": "DU123456"}]
         ):
             client = REST()
-            with patch.object(client, "_make_request") as mock_request:
-                mock_response = Mock()
-                mock_response.json.return_value = contract_data
-                mock_request.return_value = mock_response
-
+            with patch.object(client, "_make_request", return_value=api_response):
                 conid = client.get_conid("AAPL")
                 assert conid == 265598
 
     def test_get_conid_with_filters(self):
         """Test getting contract ID with filters."""
-        contract_data = [
-            {
-                "conid": 265598,
-                "companyHeader": "Apple Inc",
-                "companyName": "APPLE INC",
-                "symbol": "AAPL",
-                "description": "AAPL",
-                "isUS": True,
-                "sections": [],
-            }
-        ]
+        # API response with multiple contracts to test filtering
+        api_response = {
+            "AAPL": [
+                {
+                    "companyHeader": "Apple Inc",
+                    "companyName": "APPLE INC",
+                    "symbol": "AAPL",
+                    "description": "AAPL",
+                    "contracts": [
+                        {"conid": 265598, "isUS": True, "exchange": "NASDAQ"},
+                        {"conid": 999999, "isUS": False, "exchange": "LSE"},
+                    ],
+                }
+            ]
+        }
 
         with patch.object(
             REST, "get_accounts", return_value=[{"accountId": "DU123456"}]
         ):
             client = REST()
-            with patch.object(client, "_make_request") as mock_request:
-                mock_response = Mock()
-                mock_response.json.return_value = contract_data
-                mock_request.return_value = mock_response
-
+            with patch.object(client, "_make_request", return_value=api_response):
                 # Note: contract_filters should be a string for caching to work
                 conid_us = client.get_conid("AAPL", contract_filters='{"isUS": true}')
                 assert conid_us == 265598
@@ -172,12 +171,8 @@ class TestRESTClient:
             client = REST()
             with (
                 patch.object(client, "get_conid_simple", return_value=265598),
-                patch.object(client, "_make_request") as mock_request,
+                patch.object(client, "_make_request", return_value=snapshot_data),
             ):
-                mock_response = Mock()
-                mock_response.json.return_value = snapshot_data
-                mock_request.return_value = mock_response
-
                 snapshot = client.get_marketdata_snapshot("AAPL")
                 assert snapshot[0]["conid"] == 265598
                 assert snapshot[0]["31"] == "150.25"
@@ -246,33 +241,34 @@ class TestRESTClientEdgeCases:
 
     def test_get_conid_no_contracts(self):
         """Test getting contract ID when no contracts are found."""
+        # API returns empty dict when symbol not found
+        api_response = {}
+
         with patch.object(
             REST, "get_accounts", return_value=[{"accountId": "DU123456"}]
         ):
             client = REST()
-            with patch.object(client, "_make_request") as mock_request:
-                mock_response = Mock()
-                mock_response.json.return_value = []
-                mock_request.return_value = mock_response
+            with patch.object(client, "_make_request", return_value=api_response):
+                from src.ibcp.exceptions import MarketDataError
 
-                with pytest.raises(ValueError):
+                with pytest.raises(MarketDataError):
                     client.get_conid("INVALID")
 
     def test_get_stock_last_price_retry_logic(self):
         """Test retry logic for getting stock price."""
+        from src.ibcp.exceptions import MarketDataError
+
         with patch.object(
             REST, "get_accounts", return_value=[{"accountId": "DU123456"}]
         ):
             client = REST()
 
-            # Mock get_marketdata_snapshot to raise an exception
-            with patch.object(
-                client, "get_marketdata_snapshot"
-            ) as mock_get_marketdata_snapshot:
-                mock_get_marketdata_snapshot.side_effect = Exception("Network error")
-
-                with pytest.raises(ValueError):
-                    client.get_stock_last_price("AAPL")
+            # Mock get_marketdata_snapshot to return empty data (no price)
+            with (
+                patch.object(client, "get_marketdata_snapshot", return_value=[]),
+                pytest.raises(MarketDataError),
+            ):
+                client.get_stock_last_price("AAPL")
 
     @responses.activate
     def test_cash_balance_empty_response(self):
@@ -297,17 +293,21 @@ class TestRESTClientPerformance:
 
     def test_get_conid_performance(self, benchmark):
         """Test performance of get_conid method."""
-        contract_data = [{"conid": 265598, "symbol": "AAPL"}]
+        # Proper API response format
+        api_response = {
+            "AAPL": [
+                {
+                    "symbol": "AAPL",
+                    "contracts": [{"conid": 265598, "isUS": True}],
+                }
+            ]
+        }
 
         with patch.object(
             REST, "get_accounts", return_value=[{"accountId": "DU123456"}]
         ):
             client = REST()
-            with patch.object(client, "_make_request") as mock_request:
-                mock_response = Mock()
-                mock_response.json.return_value = contract_data
-                mock_request.return_value = mock_response
-
+            with patch.object(client, "_make_request", return_value=api_response):
                 result = benchmark(client.get_conid, "AAPL")
                 assert result == 265598
 
