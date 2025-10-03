@@ -140,18 +140,18 @@ class IBConfig:
             if value is not None:
                 # Type conversion
                 if config_key in ["ssl_verify", "debug"]:
-                    env_config[config_key] = value.lower() in ("true", "1", "yes", "on")
+                    env_config[config_key] = value.lower() in ("true", "1", "yes", "on")  # type: ignore[assignment]
                 elif config_key in ["timeout", "max_retries", "rate_limit"]:
                     try:
-                        env_config[config_key] = int(value)
+                        env_config[config_key] = int(value)  # type: ignore[assignment]
                     except ValueError:
                         raise ConfigurationError(
                             f"Invalid integer value for {env_var}: {value}"
                         ) from None
                 else:
-                    env_config[config_key] = value
+                    env_config[config_key] = value  # type: ignore[assignment]
 
-        return cls(**env_config)
+        return cls(**env_config)  # type: ignore[arg-type]
 
     @classmethod
     def from_dict(cls, config_dict: dict[str, Any]) -> "IBConfig":

@@ -563,7 +563,8 @@ class REST:
 
         except APIError as e:
             raise OrderError(
-                f"Failed to submit orders: {e.message}", order_data=list_of_orders
+                f"Failed to submit orders: {e.message}",
+                order_data=list_of_orders[0] if list_of_orders else {},  # type: ignore[arg-type]
             ) from e
 
     def _validate_order(self, order: dict[str, Any], field_name: str = "order") -> None:
@@ -731,11 +732,11 @@ class REST:
     def get_bars(
         self,
         symbol: str,
-        period="1w",
-        bar="1d",
-        outsideRth=False,
-        conid: str or int = "default",
-    ) -> dict:
+        period: str = "1w",
+        bar: str = "1d",
+        outsideRth: bool = False,
+        conid: str | int = "default",
+    ) -> dict[Any, Any]:
         """Returns market history for the given instrument. conid should be provided for futures and options.
 
         :param symbol: Symbol of the stock instrument

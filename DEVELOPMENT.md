@@ -17,17 +17,22 @@ uv run pre-commit install
 
 ### **What Runs Where?**
 
-**Local (Pre-commit) - Fast & Auto-fixing:**
+**Local (Pre-commit) - Fast & Auto-fixing (~5-10 seconds):**
 - ✅ Ruff formatting and linting (auto-fixes)
+- ✅ Mypy type checking (validation only, catches errors before push)
 - ✅ File checks (trailing whitespace, etc.)
 - ✅ Syntax validation
 
-**CI (GitHub Actions) - Validation & Testing:**
-- ✅ Type checking (mypy)
+**CI (GitHub Actions) - Comprehensive Validation & Testing (~3-5 minutes):**
+- ✅ Type checking (mypy) - validates again
 - ✅ Security scanning (bandit)
 - ✅ Full test suite with coverage
 - ✅ Performance benchmarks
 - ✅ Documentation build
+
+### **Why Pre-commit Didn't Catch Errors Before?**
+
+We initially removed Mypy from pre-commit to keep it fast. However, this meant type errors only showed up in CI. **We've now added Mypy back with relaxed settings** so it catches serious type errors locally before you push, while still running fast (~5-10 seconds total).
 
 ### **Local Development (Pre-commit)**
 Pre-commit hooks run automatically when you commit and will **auto-fix** issues:
